@@ -1,23 +1,53 @@
-
-# This is the server logic for a Shiny web application.
-# You can find out more about building applications with Shiny here:
-#
-# http://shiny.rstudio.com
-#
-
 library(shiny)
 
 shinyServer(function(input, output) {
-
-  output$distPlot <- renderPlot({
-
-    # generate bins based on input$bins from ui.R
-    x    <- faithful[, 2]
-    bins <- seq(min(x), max(x), length.out = input$bins + 1)
-
-    # draw the histogram with the specified number of bins
-    hist(x, breaks = bins, col = 'darkgray', border = 'white')
-
+  
+  x <- reactive(binom.test(input$successes, input$trials, 0.5, alternative=input$hypothesis))
+  
+  output$successcontainer <- renderUI({
+    sliderInput(inputId="successes", label="Number of successes", min=0, max=input$trials, value=input$trials/2, step=1)
+    
   })
-
+  
+  output$binomPDF<-renderPlot({
+    plot.x<-1:x()$parameter
+    plot.y<-dbinom(plot.x,x()$parameter,0.5)
+    plot.title<-paste("Binomial probability density function for",x()$parameter, "independent trials")
+    plot(plot.x, plot.y, type="h", main=plot.title, 
+         xlab="Number of successes (red marker shows observed value)", 
+         ylab="Probability of occurrence",
+         frame.plot=FALSE)
+    axis(side=1)
+    legend("topright",paste("p-value =", signif(x()$p.value, digits=3)) ,bty="o")
+    points(xy.coords(x()$statistic,0), cex=1, pch=2, col="red")
+  })
+  
+  output$text1 <- renderText({
+    paste("Number of trials: ",x()$parameter)
+  })
+  
+  output$text2 <- renderText({
+    paste("Number of successes: ",x()$statistic)
+  })
+  
+  output$text3 <- renderText({
+    paste("Probability of success under null hypothesis: 0.5")
+  })
+  
+  output$text4 <- renderText({
+    paste("Alternative hypothesis: ",x()$alternative)
+  })
+  
+  output$text5 <- renderText({
+    paste("Point estimate for probability of success: ",signif(x()$estimate,3))
+  })
+  
+  output$text6 <- renderText({
+    paste("95% confidence interval for point estimate: [",signif(x()$conf.int[1],3), ",",signif(x()$conf.int[2],3),"]")
+  })
+  
+  output$text7 <- renderText({
+    paste("P-value: ",signif(x()$p.value, digits=3))
+  })
+  
 })
